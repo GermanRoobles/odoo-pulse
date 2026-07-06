@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Analizando... — Odoo Pulse{% endblock %}
+{% block body %}
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center;">
+  <div style="text-align:center; max-width:500px; padding:2rem;">
+    {% if status == 'error' %}
+      <h1 style="color:var(--red); margin-bottom:1rem;">Error en el análisis</h1>
+      <p class="text-muted">{{ error_message or 'Ocurrió un error inesperado.' }}</p>
+      <a href="/" class="btn btn-secondary" style="margin-top:2rem;">Volver al inicio</a>
+    {% else %}
+      <div class="spinner" style="margin:0 auto 1.5rem;"></div>
+      <h1 style="margin-bottom:0.5rem;">Tu informe está en camino</h1>
+      <p class="text-muted">Estamos analizando tu Odoo. Esto suele tardar menos de 2 minutos.</p>
+    {% endif %}
+  </div>
+</div>
+{% if status != 'error' %}
+<script>
+(function poll() {
+  fetch('/api/scans/{{ scan_id }}/status')
+    .then(r => r.json())
+    .then(body => {
+      if (body.status === 'completado') location.reload();
+      else if (body.status !== 'error') setTimeout(poll, 4000);
+    })
+    .catch(() => setTimeout(poll, 5000));
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ client.company_name }} — Odoo Pulse Admin{% endblock %}
+{% block body %}
+<header style="border-bottom:1px solid var(--border);">
+  <div class="container">
+    <nav class="nav">
+      <div class="flex items-center gap-2">
+        <a href="/admin/dashboard" class="btn btn-secondary btn-sm">&larr; Volver</a>
+        <span class="nav-brand">Odoo Pulse</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-subtle text-sm">{{ admin_email }}</span>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Salir</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main style="padding:2rem 0;">
+  <div class="container" style="max-width:900px;">
+    <div class="flex items-center justify-between flex-wrap gap-2" style="margin-bottom:2rem;">
+      <div>
+        <h1>{{ client.company_name }}</h1>
+        <p class="text-muted">{{ client.contact_name }} &mdash;
+          <a href="mailto:{{ client.contact_email }}">{{ client.contact_email }}</a>
+        </p>
+      </div>
+      <button onclick="deleteClient({{ client.id }})" class="btn btn-danger btn-sm">Eliminar cliente</button>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:2rem;">
+      <div class="card">
+        <h3 style="margin-bottom:1rem;">Estado del lead</h3>
+        <div class="form-group">
+          <label for="lead_status">Estado</label>
+          <select id="lead_status">
+            {% for s in lead_statuses %}
+            <option value="{{ s }}" {% if s == client.lead_status.value %}selected{% endif %}>
+              {{ s.replace('_', ' ').title() }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notas internas</label>
+          <textarea id="notes" rows="4">{{ client.notes }}</textarea>
+        </div>
+        <button onclick="saveClient({{ client.id }})" class="btn btn-primary btn-sm">Guardar</button>
+        <span id="save-feedback" class="text-subtle text-sm" style="margin-left:0.75rem;"></span>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:1rem;">Conexión Odoo</h3>
+        <p class="text-sm text-muted">URL:
+          <span class="text-mono" style="color:var(--text)">{{ client.odoo_url }}</span>
+        </p>
+        <p class="text-sm text-muted" style="margin-top:0.5rem;">Base de datos:
+          <span class="text-mono" style="color:var(--text)">{{ client.odoo_db_name }}</span>
+        </p>
+        <p class="text-sm text-muted" style="margin-top:0.5rem;">Usuario:
+          <span class="text-mono" style="color:var(--text)">{{ client.odoo_username }}</span>
+        </p>
+      </div>
+    </div>
+
+    <h2 style="margin-bottom:1rem;">Historial de escaneos</h2>
+    {% if scans %}
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Score</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scan in scans %}
+            <tr>
+              <td class="text-sm text-muted">{{ scan.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td>
+                {% if scan.status.value == 'completado' %}<span style="color:var(--green)">Completado</span>
+                {% elif scan.status.value == 'error' %}<span style="color:var(--red)">Error</span>
+                {% elif scan.status.value == 'en_progreso' %}<span style="color:var(--amber)">En progreso</span>
+                {% else %}<span class="text-subtle">Pendiente</span>{% endif %}
+              </td>
+              <td>
+                {% if scan.score is not none %}
+                  <span class="text-mono" style="color:var(--teal)">{{ scan.score }}</span>
+                  <span class="text-subtle text-sm">— {{ scan.score_label }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                <div class="flex gap-1 flex-wrap">
+                  {% if scan.status.value == 'completado' %}
+                  <a href="/report/{{ scan.public_token }}" target="_blank" class="btn btn-secondary btn-sm">Ver</a>
+                  <button onclick="copyLink('{{ scan.public_token }}')" class="btn btn-secondary btn-sm">Copiar link</button>
+                  {% if not scan.is_paid_report %}
+                  <button onclick="unlockReport({{ scan.id }})" class="btn btn-secondary btn-sm">Desbloquear</button>
+                  {% endif %}
+                  {% endif %}
+                  {% if scan.status.value in ['completado', 'error'] %}
+                  <button onclick="rerunScan({{ scan.id }})" class="btn btn-secondary btn-sm">Re-analizar</button>
+                  {% endif %}
+                </div>
+                {% if scan.error_message %}
+                <p class="text-sm" style="color:var(--red); margin-top:0.25rem;">{{ scan.error_message }}</p>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-subtle">Sin escaneos todavía.</p>
+    {% endif %}
+  </div>
+</main>
+
+<script>
+async function saveClient(id) {
+  const status = document.getElementById('lead_status').value;
+  const notes = document.getElementById('notes').value;
+  const res = await fetch('/api/admin/clients/' + id, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ lead_status: status, notes: notes }),
+  });
+  const fb = document.getElementById('save-feedback');
+  if (res.ok) {
+    fb.textContent = 'Guardado';
+    setTimeout(() => { fb.textContent = ''; }, 2500);
+  } else {
+    fb.textContent = 'Error al guardar';
+    fb.style.color = 'var(--red)';
+  }
+}
+
+async function deleteClient(id) {
+  if (!confirm('¿Seguro? Esto eliminará el cliente y todos sus escaneos (incluidas las credenciales).')) return;
+  const res = await fetch('/api/admin/clients/' + id, { method: 'DELETE' });
+  if (res.ok) window.location.href = '/admin/dashboard';
+}
+
+async function unlockReport(scanId) {
+  await fetch('/api/scans/' + scanId + '/unlock', { method: 'POST' });
+  location.reload();
+}
+
+async function rerunScan(scanId) {
+  const res = await fetch('/api/admin/scans/' + scanId + '/rerun', { method: 'POST' });
+  if (res.ok) { alert('Re-análisis iniciado'); location.reload(); }
+  else { const b = await res.json(); alert(b.detail || 'Error'); }
+}
+
+function copyLink(token) {
+  const url = location.origin + '/report/' + token;
+  navigator.clipboard.writeText(url).then(() => alert('Link copiado al portapapeles'));
+}
+
+async function logout() {
+  await fetch('/api/admin/logout', { method: 'POST' });
+  window.location.href = '/admin/login';
+}
+</script>
+{% endblock %}

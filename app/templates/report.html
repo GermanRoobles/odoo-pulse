@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Informe Odoo Pulse — {{ client.company_name }}{% endblock %}
+{% block head %}
+<style>
+@media print {
+  header, footer, .no-print { display: none !important; }
+  body { background: #fff; color: #111; background-image: none; }
+  .card { border: 1px solid #ccc; background: #fff; }
+  .score-arc { stroke: #333 !important; }
+  .score-ring-wrapper .score-value { color: #111 !important; }
+  .badge-high { background: #fee; color: #c00; }
+  .badge-medium { background: #fff3cd; color: #856404; }
+  .badge-low { background: #d4edda; color: #155724; }
+  .finding-locked { display: none !important; }
+  .teaser-gate { display: none !important; }
+  .cta-section { display: none !important; }
+  .savings-bar { background: #f5f5f5; border-color: #ccc; }
+  .savings-stat .stat-value { color: #333; }
+  a { color: #111; text-decoration: none; }
+}
+.finding-locked {
+  position: relative;
+  overflow: hidden;
+}
+.finding-locked .finding-body {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+.finding-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(11,17,32,0.4) 0%, rgba(11,17,32,0.15) 100%);
+}
+.lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+</style>
+{% endblock %}
+{% block body %}
+<header style="border-bottom:1px solid var(--border);" class="no-print">
+  <div class="container">
+    <nav class="nav">
+      <span class="nav-brand">Odoo Pulse</span>
+      <div class="flex items-center gap-2">
+        <span class="text-muted text-sm">Informe de auditoría</span>
+        <button onclick="window.print()" class="btn btn-secondary btn-sm">⬇ Descargar PDF</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main style="padding:3rem 0;">
+  <div class="container" style="max-width:800px;">
+
+    <!-- Demo banner -->
+    {% if scan.is_demo %}
+    <div style="background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); border-radius:var(--radius); padding:0.75rem 1rem; margin-bottom:1.5rem; font-size:0.875rem; color:var(--text-muted);">
+      📋 <strong style="color:var(--text)">Informe de demostración</strong> — datos ficticios con fines ilustrativos. No corresponden a ninguna empresa real.
+    </div>
+    {% endif %}
+
+    <!-- Score & summary -->
+    <div class="card" style="text-align:center; margin-bottom:2rem;">
+      <p class="text-subtle text-sm" style="margin-bottom:1.25rem; text-transform:uppercase; letter-spacing:.1em;">
+        Puntuación de madurez de automatización
+      </p>
+      <div class="score-ring-wrapper" style="margin-bottom:1.25rem;">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="76" class="score-track"/>
+          <circle cx="90" cy="90" r="76" class="score-arc" id="score-arc"/>
+        </svg>
+        <span class="score-value" id="score-display">0</span>
+      </div>
+      <h2 style="margin-bottom:0.5rem;">{{ scan.score_label }}</h2>
+      <p class="text-muted" style="max-width:560px; margin:0 auto;">{{ scan.summary }}</p>
+    </div>
+
+    <!-- Savings summary bar -->
+    {% if total_hours > 0 %}
+    <div class="savings-bar no-print">
+      <div class="savings-stat">
+        <span class="stat-value">{{ total_hours }}h+</span>
+        <span class="stat-label">ahorro potencial / mes</span>
+      </div>
+      <div style="width:1px; background:var(--border); margin:0 0.5rem;"></div>
+      <div class="savings-stat">
+        <span class="stat-value">{{ all_findings_count }}</span>
+        <span class="stat-label">hallazgos detectados</span>
+      </div>
+      {% if high_count > 0 %}
+      <div style="width:1px; background:var(--border); margin:0 0.5rem;"></div>
+      <div class="savings-stat">
+        <span class="stat-value" style="color:var(--red);">{{ high_count }}</span>
+        <span class="stat-label">prioridad alta</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Quick win -->
+    {% if quick_win %}
+    <div style="background:rgba(20,184,166,0.07); border:1px solid rgba(20,184,166,0.25); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; margin-bottom:2rem;">
+      <p class="text-subtle text-sm" style="text-transform:uppercase; letter-spacing:.1em; margin-bottom:0.5rem;">
+        ⚡ Quick win
+      </p>
+      <p>{{ quick_win }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Findings -->
+    <h2 style="margin-bottom:1.5rem;">Hallazgos</h2>
+    {% for f in findings %}
+    {% set locked = loop.index0 >= teaser_from %}
+    <div class="card {{ 'finding-locked' if locked else 'finding-card-' + f.severity }}" style="margin-bottom:1rem; position:relative;">
+      {% if locked %}
+      <div class="lock-overlay">
+        <div style="text-align:center; z-index:3; position:relative;">
+          <div style="font-size:1.5rem; margin-bottom:0.25rem;">🔒</div>
+          <p class="text-subtle text-sm">Informe completo</p>
+        </div>
+      </div>
+      {% endif %}
+      <div class="{{ 'finding-body' if locked else '' }}">
+        <div class="flex items-center gap-1 justify-between flex-wrap" style="margin-bottom:0.75rem;">
+          <h3>{{ f.title }}</h3>
+          <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+        </div>
+        <p class="text-muted" style="margin-bottom:0.875rem;">{{ f.description }}</p>
+        {% if not locked %}
+        <div class="flex gap-2 flex-wrap text-sm">
+          <span style="color:var(--teal);">🕐 {{ f.estimated_hours_month }}h/mes ahorrables</span>
+          <span class="text-subtle">🔧 {{ f.recommended_tool }}</span>
+        </div>
+        {% else %}
+        <div class="flex gap-2 flex-wrap text-sm">
+          <span style="color:var(--teal);">🕐 {{ f.estimated_hours_month }}h/mes ahorrables</span>
+          <span class="text-subtle">🔧 {{ f.recommended_tool }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Teaser CTA -->
+    {% if is_teaser and all_findings_count > 1 %}
+    <div class="teaser-gate card" style="text-align:center; border-style:dashed; padding:2.5rem; margin-bottom:2rem;">
+      <p style="font-size:1.125rem; margin-bottom:0.5rem;">
+        Hay <strong style="color:var(--teal)">{{ all_findings_count - 1 }} hallazgos más</strong> con plan de acción detallado.
+      </p>
+      <p class="text-subtle text-sm" style="margin-bottom:1.5rem;">
+        Estimaciones de ahorro, herramientas recomendadas y priorización de implementación.
+      </p>
+      <a href="mailto:germanroobles@gmail.com?subject=Solicito informe completo Odoo Pulse — {{ client.company_name }}&body=Hola Germán, me gustaría ver el informe completo de auditoría para {{ client.company_name }}."
+         class="btn btn-primary">Desbloquear informe completo</a>
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="cta-section" style="text-align:center; margin-top:3rem; padding:2.5rem 0; border-top:1px solid var(--border);">
+      <h2 style="margin-bottom:0.75rem;">¿Quieres que lo implementemos?</h2>
+      <p class="text-muted" style="margin-bottom:1.5rem;">
+        Te ayudamos a implementar estas automatizaciones y recuperar esas horas cada mes.
+      </p>
+      <a href="mailto:germanroobles@gmail.com?subject=Quiero implementar mejoras Odoo — {{ client.company_name }}"
+         class="btn btn-primary">Hablemos</a>
+    </div>
+
+  </div>
+</main>
+
+<footer style="padding:1.5rem 0; border-top:1px solid var(--border); margin-top:1rem;" class="no-print">
+  <div class="container">
+    <p class="text-subtle text-sm" style="text-align:center;">
+      Informe generado por Odoo Pulse · {{ client.company_name }}
+    </p>
+  </div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const target = {{ scan.score }};
+  const arc = document.getElementById('score-arc');
+  const el = document.getElementById('score-display');
+  if (!el || !arc) return;
+
+  const circumference = 477.5;
+  const color = target >= 70 ? 'var(--green)' : (target >= 40 ? 'var(--amber)' : 'var(--red)');
+  arc.style.stroke = color;
+  el.style.color = color;
+
+  const duration = 1200;
+  const start = performance.now();
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function step(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeOut(progress);
+    el.textContent = Math.round(eased * target);
+    arc.style.strokeDashoffset = circumference * (1 - eased * target / 100);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  setTimeout(() => requestAnimationFrame(step), 150);
+})();
+</script>
+{% endblock %}

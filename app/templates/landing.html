@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+{% block title %}Odoo Pulse — Auditoría gratuita de automatización Odoo{% endblock %}
+{% block head %}
+<style>
+/* ── Hero ── */
+.hero {
+  padding: 5rem 0 4rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 900px; height: 600px;
+  background: radial-gradient(ellipse, rgba(20,184,166,0.13) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 3rem; }
+  .hero-visual { order: -1; }
+}
+
+/* ── Product preview card ── */
+.product-preview {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(20,184,166,0.08);
+  position: relative;
+}
+.preview-topbar {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+.preview-url {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.7rem;
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  margin: 0 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-body { padding: 1.25rem; }
+.preview-company {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-subtle);
+  margin-bottom: 0.75rem;
+}
+.preview-score-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.mini-ring {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 5px solid var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(251,191,36,0.2);
+}
+.preview-score-info p:first-child { font-weight: 600; font-size: 0.875rem; }
+.preview-score-info p:last-child { font-size: 0.75rem; color: var(--text-subtle); }
+.preview-divider { height: 1px; background: var(--border); margin-bottom: 0.75rem; }
+.preview-finding {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  border-left: 2px solid transparent;
+}
+.preview-finding.pf-high { background: rgba(248,113,113,0.06); border-left-color: var(--red); }
+.preview-finding.pf-medium { background: rgba(251,191,36,0.06); border-left-color: var(--amber); }
+.preview-finding.pf-locked { background: rgba(100,116,139,0.06); filter: blur(1.5px); }
+.preview-finding-label { flex: 1; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-badge-sev {
+  padding: 0.15em 0.5em;
+  border-radius: 99px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.preview-badge-sev.high { background: rgba(248,113,113,0.15); color: var(--red); }
+.preview-badge-sev.medium { background: rgba(251,191,36,0.15); color: var(--amber); }
+.preview-badge-sev.locked { background: rgba(100,116,139,0.15); color: var(--text-subtle); }
+.preview-tag {
+  position: absolute;
+  top: -10px; right: 1.25rem;
+  background: var(--teal);
+  color: #0b1120;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2em 0.75em;
+  border-radius: 99px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ── Stats strip ── */
+.stats-strip {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 0;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+@media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-item {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-item .big { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; color: var(--teal); }
+.stat-item .label { font-size: 0.8rem; color: var(--text-subtle); margin-top: 0.125rem; }
+
+/* ── Steps ── */
+.steps-section { padding: 5rem 0; }
+.steps-header { text-align: center; margin-bottom: 3rem; }
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  position: relative;
+}
+@media (max-width: 700px) { .steps-grid { grid-template-columns: 1fr; } }
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.step-card:hover { border-color: rgba(20,184,166,0.4); box-shadow: 0 0 24px rgba(20,184,166,0.07); }
+.step-icon {
+  width: 44px; height: 44px;
+  background: rgba(20,184,166,0.1);
+  border: 1px solid rgba(20,184,166,0.25);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+.step-num-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--teal);
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 0.375rem;
+}
+.step-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+.step-card p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; }
+
+/* ── Form section ── */
+.form-section { padding: 5rem 0; border-top: 1px solid var(--border); }
+.form-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+@media (max-width: 900px) { .form-section-grid { grid-template-columns: 1fr; } }
+.form-pitch h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 1rem; }
+.form-pitch p { color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.7; }
+.trust-list { display: flex; flex-direction: column; gap: 0.625rem; }
+.trust-item {
+  display: flex; align-items: flex-start; gap: 0.625rem;
+  font-size: 0.875rem; color: var(--text-muted);
+}
+.trust-item .icon { flex-shrink: 0; font-size: 1rem; margin-top: 0.05rem; }
+
+/* ── Security section ── */
+.security-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 3rem 0;
+}
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  text-align: center;
+}
+.security-item .icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+.security-item h4 { font-size: 0.9375rem; margin-bottom: 0.25rem; }
+.security-item p { font-size: 0.8125rem; color: var(--text-subtle); }
+
+/* ── How to create user ── */
+.howto-section { padding: 4rem 0; }
+</style>
+{% endblock %}
+{% block body %}
+
+<header>
+  <div class="container">
+    <nav class="nav">
+      <span class="nav-brand">Odoo Pulse</span>
+      <div class="flex items-center gap-2">
+        <a href="#como-funciona" class="btn btn-secondary btn-sm hide-mobile">Cómo funciona</a>
+        <a href="/report/demo-altaviva" class="btn btn-secondary btn-sm" target="_blank">Ver demo</a>
+        <a href="#solicitar" class="btn btn-primary btn-sm">Auditoría gratis →</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <!-- Left: copy -->
+        <div>
+          <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(20,184,166,0.08); border:1px solid rgba(20,184,166,0.2); border-radius:99px; padding:0.3rem 0.875rem; font-size:0.8rem; color:var(--teal); margin-bottom:1.5rem;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite;"></span>
+            Gratis · Sin instalaciones · Solo lectura
+          </div>
+          <h1 style="margin-bottom:1.25rem; line-height:1.15;">
+            Tu Odoo está perdiendo horas.<br>
+            <span class="text-teal">Descubre cuántas.</span>
+          </h1>
+          <p style="font-size:1.125rem; color:var(--text-muted); margin-bottom:2rem; line-height:1.7; max-width:480px;">
+            Conectamos con tu instancia Odoo en modo solo lectura, analizamos 9 métricas operativas con IA y te entregamos un diagnóstico de automatización en menos de 2 minutos.
+          </p>
+          <div class="flex gap-2 flex-wrap" style="margin-bottom:2.5rem;">
+            <a href="#solicitar" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 1.75rem;">
+              Analizar mi Odoo gratis →
+            </a>
+            <a href="/report/demo-altaviva" target="_blank" class="btn btn-secondary" style="font-size:1rem; padding:0.75rem 1.75rem;">
+              Ver informe de ejemplo
+            </a>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:1rem; font-size:0.8rem; color:var(--text-subtle);">
+            <span>✓ Sin instalar nada</span>
+            <span>✓ Resultado en ~2 min</span>
+            <span>✓ Credenciales cifradas</span>
+            <span>✓ No escribe nada en tu Odoo</span>
+          </div>
+        </div>
+
+        <!-- Right: product preview -->
+        <div class="hero-visual">
+          <div class="product-preview" style="position:relative;">
+            <span class="preview-tag">Ejemplo real</span>
+            <div class="preview-topbar">
+              <div class="preview-dot" style="background:#ef4444;"></div>
+              <div class="preview-dot" style="background:#f59e0b;"></div>
+              <div class="preview-dot" style="background:#22c55e;"></div>
+              <div class="preview-url">odoo-pulse.com/report/abc123</div>
+            </div>
+            <div class="preview-body">
+              <p class="preview-company">Distribuciones Altaviva · Distribución</p>
+              <div class="preview-score-row">
+                <div class="mini-ring">58</div>
+                <div class="preview-score-info">
+                  <p>Automatización parcial</p>
+                  <p>Potencial de mejora significativo</p>
+                </div>
+              </div>
+              <div style="background:rgba(20,184,166,0.06); border:1px solid rgba(20,184,166,0.15); border-radius:8px; padding:0.625rem 0.875rem; margin-bottom:0.875rem; font-size:0.75rem; color:var(--teal);">
+                ⚡ <strong>Quick win:</strong> Activar seguimiento automático en CRM
+              </div>
+              <div class="preview-divider"></div>
+              <div class="preview-finding pf-high">
+                <span class="preview-finding-label">CRM sin seguimiento estructurado</span>
+                <span class="preview-badge-sev high">alta</span>
+              </div>
+              <div class="preview-finding pf-medium">
+                <span class="preview-finding-label">18% de envíos con retraso sin alerta</span>
+                <span class="preview-badge-sev medium">media</span>
+              </div>
+              <div class="preview-finding pf-medium">
+                <span class="preview-finding-label">112 actividades vencidas acumuladas</span>
+                <span class="preview-badge-sev medium">media</span>
+              </div>
+              <div class="preview-finding pf-locked">
+                <span class="preview-finding-label">3 hallazgos más disponibles…</span>
+                <span class="preview-badge-sev locked">🔒</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Stats strip ── -->
+  <div class="stats-strip">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="big">9</div>
+          <div class="label">Métricas analizadas</div>
+        </div>
+        <div class="stat-item">
+          <div class="big">&lt;2'</div>
+          <div class="label">Tiempo de resultado</div>
+        </div>
+        <div class="stat-item">
+          <div class="big">0</div>
+          <div class="label">Cambios en tu Odoo</div>
+        </div>
+        <div class="stat-item">
+          <div class="big">100%</div>
+          <div class="label">Gratis para empezar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── How it works ── -->
+  <section id="como-funciona" class="steps-section">
+    <div class="container">
+      <div class="steps-header">
+        <p class="text-subtle text-sm" style="text-transform:uppercase; letter-spacing:.1em; margin-bottom:0.5rem;">Proceso</p>
+        <h2 style="margin-bottom:0.75rem;">¿Cómo funciona?</h2>
+        <p class="text-muted" style="max-width:480px; margin:0 auto; font-size:0.9375rem;">Sin instalar nada, sin dar acceso total. Solo tus credenciales de lectura.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-icon">🔌</div>
+          <p class="step-num-label">Paso 01</p>
+          <h3>Conexión segura</h3>
+          <p>Introduces tu URL, base de datos y usuario. Nos conectamos vía XML-RPC, el protocolo estándar de Odoo. Nunca modificamos nada.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">🔍</div>
+          <p class="step-num-label">Paso 02</p>
+          <h3>Análisis de 9 métricas</h3>
+          <p>Escaneamos ventas bloqueadas, facturas pendientes, CRM sin actividad, automatizaciones existentes, datos de contacto incompletos y más.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">🤖</div>
+          <p class="step-num-label">Paso 03</p>
+          <h3>Diagnóstico con IA</h3>
+          <p>Claude AI analiza los datos en contexto, calcula tu puntuación de madurez (0-100) e identifica las automatizaciones de mayor impacto.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Form section ── -->
+  <section id="solicitar" class="form-section">
+    <div class="container">
+      <div class="form-section-grid">
+
+        <!-- Left: pitch -->
+        <div class="form-pitch">
+          <p class="text-subtle text-sm" style="text-transform:uppercase; letter-spacing:.1em; margin-bottom:0.75rem;">Auditoría gratuita</p>
+          <h2>Obtén tu diagnóstico ahora</h2>
+          <p>Rellena el formulario con los datos de conexión de tu Odoo. En menos de 2 minutos tendrás un informe completo con hallazgos priorizados y estimaciones de ahorro de tiempo.</p>
+
+          <div class="trust-list">
+            <div class="trust-item">
+              <span class="icon">🔒</span>
+              <span><strong style="color:var(--text);">Solo lectura garantizada.</strong> Accedemos vía XML-RPC en modo consulta. Técnicamente imposible escribir nada en tu Odoo.</span>
+            </div>
+            <div class="trust-item">
+              <span class="icon">🛡</span>
+              <span><strong style="color:var(--text);">Credenciales cifradas.</strong> Tus datos se cifran con Fernet AES-128 antes de guardarse. La clave maestra está fuera del código.</span>
+            </div>
+            <div class="trust-item">
+              <span class="icon">📧</span>
+              <span><strong style="color:var(--text);">Sin spam.</strong> Tu email solo se usa para enviarte el link del informe. Nada más.</span>
+            </div>
+            <div class="trust-item">
+              <span class="icon">⚡</span>
+              <span><strong style="color:var(--text);">Resultado inmediato.</strong> El informe se genera en tiempo real. No hay espera, no hay cola.</span>
+            </div>
+          </div>
+
+          <div style="margin-top:2rem; padding:1.25rem; background:rgba(20,184,166,0.05); border:1px solid rgba(20,184,166,0.15); border-radius:var(--radius-lg);">
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">¿Prefieres ver el resultado antes de conectar?</p>
+            <a href="/report/demo-altaviva" target="_blank" class="btn btn-secondary btn-sm" style="width:100%; justify-content:center;">
+              Ver informe de demostración →
+            </a>
+          </div>
+        </div>
+
+        <!-- Right: form -->
+        <div>
+          <div class="card" style="box-shadow:var(--shadow);">
+            <h3 style="font-size:1.125rem; margin-bottom:1.5rem;">Datos de la empresa</h3>
+            <div id="form-alert"></div>
+            <form id="lead-form">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="company_name">Empresa</label>
+                  <input type="text" id="company_name" name="company_name" required placeholder="Mi Empresa S.L.">
+                </div>
+                <div class="form-group">
+                  <label for="contact_name">Tu nombre</label>
+                  <input type="text" id="contact_name" name="contact_name" required placeholder="Juan García">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="contact_email">Email de contacto</label>
+                <input type="email" id="contact_email" name="contact_email" required placeholder="juan@empresa.com">
+              </div>
+              <div class="form-group">
+                <label for="sector">Sector <span class="text-subtle">(opcional)</span></label>
+                <select id="sector" name="sector">
+                  <option value="">— No especificado —</option>
+                  <option value="ecommerce">E-commerce / Tienda online</option>
+                  <option value="fabricacion">Fabricación / Industria</option>
+                  <option value="distribucion">Distribución / Mayorista</option>
+                  <option value="servicios">Servicios profesionales</option>
+                  <option value="construccion">Construcción / Instalaciones</option>
+                  <option value="retail">Retail / Tienda física</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+
+              <hr style="border-color:var(--border); margin:1.25rem 0;">
+              <h4 style="font-size:0.875rem; font-weight:600; color:var(--text-muted); margin-bottom:1rem; text-transform:uppercase; letter-spacing:.06em;">Conexión Odoo</h4>
+
+              <div class="form-group">
+                <label for="odoo_url">URL de tu Odoo</label>
+                <input type="url" id="odoo_url" name="odoo_url" required placeholder="https://miempresa.odoo.com">
+              </div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="odoo_db_name">Base de datos</label>
+                  <input type="text" id="odoo_db_name" name="odoo_db_name" required placeholder="miempresa">
+                </div>
+                <div class="form-group">
+                  <label for="odoo_username">Usuario técnico</label>
+                  <input type="text" id="odoo_username" name="odoo_username" required placeholder="audit@empresa.com">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="odoo_password">Contraseña / API Key</label>
+                <input type="password" id="odoo_password" name="odoo_password" required>
+                <p class="form-hint">
+                  Las credenciales se cifran al guardarlas. Recomendamos un usuario de solo lectura.
+                  <a href="#como-crear-usuario">¿Cómo crearlo?</a>
+                </p>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" id="submit-btn" style="margin-top:0.25rem; padding:0.875rem; font-size:1rem;">
+                Analizar mi Odoo gratis →
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress overlay (hidden) -->
+      <div id="progress-section" style="display:none; text-align:center; padding:4rem 0;">
+        <div class="spinner" style="margin:0 auto 1.5rem;"></div>
+        <h2 style="margin-bottom:0.5rem;">Analizando tu Odoo&hellip;</h2>
+        <p class="text-muted" id="progress-msg">Conectando con tu instancia&hellip;</p>
+        <div style="margin-top:1.5rem; display:flex; justify-content:center; gap:0.5rem; flex-wrap:wrap;" id="progress-steps"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Security strip ── -->
+  <section class="security-section">
+    <div class="container">
+      <div class="security-grid">
+        <div class="security-item">
+          <div class="icon">🔒</div>
+          <h4>Solo lectura</h4>
+          <p>XML-RPC en modo consulta. Imposible escribir en tu Odoo.</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">🛡</div>
+          <h4>Cifrado Fernet AES-128</h4>
+          <p>Credenciales cifradas en reposo. Clave maestra fuera del código.</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">🚫</div>
+          <h4>Anti-SSRF</h4>
+          <p>Rechazamos IPs privadas y localhost. Sin ataques de redirección.</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">🤐</div>
+          <h4>Sin logs de contraseñas</h4>
+          <p>Nunca registramos credenciales en logs. Solo datos de auditoría.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How to create user ── -->
+  <section id="como-crear-usuario" class="howto-section">
+    <div class="container" style="max-width:700px;">
+      <h2 style="margin-bottom:0.5rem;">Cómo crear un usuario de solo lectura</h2>
+      <p class="text-muted" style="margin-bottom:1.5rem; font-size:0.9375rem;">Recomendado para mayor seguridad — aunque puedes usar tu usuario habitual.</p>
+      <div class="card">
+        <ol style="display:flex; flex-direction:column; gap:0.875rem; color:var(--text-muted); padding-left:1.25rem;">
+          <li>Ve a <strong style="color:var(--text)">Ajustes → Usuarios</strong> y crea un usuario nuevo.</li>
+          <li>Asígnale el perfil <strong style="color:var(--text)">Portal</strong> o un perfil personalizado sin derechos de edición.</li>
+          <li>Activa acceso de lectura a Ventas, Inventario, Contabilidad y CRM.</li>
+          <li>Establece una contraseña y anótala para el formulario.</li>
+          <li>Opcional pero recomendado: usa una <strong style="color:var(--text)">API Key</strong> en vez de contraseña — en Ajustes → Usuario → Seguridad.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer style="padding:2.5rem 0; border-top:1px solid var(--border);">
+  <div class="container">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+      <span class="nav-brand" style="font-size:0.9375rem;">Odoo Pulse</span>
+      <p class="text-subtle text-sm">Herramienta de auditoría automática · Tus datos están cifrados y no se comparten con terceros.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form = document.getElementById('lead-form');
+const formSection = document.querySelector('.form-section-grid');
+const progressSection = document.getElementById('progress-section');
+const progressMsg = document.getElementById('progress-msg');
+const alertEl = document.getElementById('form-alert');
+
+const PROGRESS_STEPS = [
+  { icon: '🔌', text: 'Conectando con tu instancia…' },
+  { icon: '📊', text: 'Analizando pedidos y ventas…' },
+  { icon: '📦', text: 'Revisando flujos de inventario…' },
+  { icon: '💰', text: 'Evaluando facturación y cobros…' },
+  { icon: '🤖', text: 'Generando diagnóstico con IA…' },
+];
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  alertEl.innerHTML = '';
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analizando…';
+
+  const data = Object.fromEntries(new FormData(form));
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      alertEl.innerHTML = `<div class="alert alert-error">${body.detail || 'Error al conectar con tu Odoo. Revisa los datos.'}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Analizar mi Odoo gratis →';
+      return;
+    }
+    formSection.style.display = 'none';
+    progressSection.style.display = 'block';
+    pollStatus(body.scan_id, body.public_token);
+  } catch(err) {
+    alertEl.innerHTML = '<div class="alert alert-error">Error de red. Inténtalo de nuevo.</div>';
+    btn.disabled = false;
+    btn.textContent = 'Analizar mi Odoo gratis →';
+  }
+});
+
+async function pollStatus(scanId, token) {
+  let stepIndex = 0;
+  const stepsEl = document.getElementById('progress-steps');
+
+  function showStep(i) {
+    const s = PROGRESS_STEPS[Math.min(i, PROGRESS_STEPS.length - 1)];
+    progressMsg.textContent = s.text;
+    stepsEl.innerHTML = PROGRESS_STEPS.map((st, idx) => `
+      <span style="font-size:0.8rem; padding:0.3rem 0.75rem; border-radius:99px;
+        background:${idx <= i ? 'rgba(20,184,166,0.12)' : 'var(--bg-card)'};
+        border:1px solid ${idx <= i ? 'rgba(20,184,166,0.3)' : 'var(--border)'};
+        color:${idx <= i ? 'var(--teal)' : 'var(--text-subtle)'};">
+        ${st.icon} ${st.text.replace('…','')}
+      </span>`).join('');
+  }
+  showStep(0);
+
+  const interval = setInterval(async () => {
+    try {
+      showStep(stepIndex++);
+      const res = await fetch(`/api/scans/${scanId}/status`);
+      const body = await res.json();
+      if (body.status === 'completado') {
+        clearInterval(interval);
+        window.location.href = `/report/${token}`;
+      } else if (body.status === 'error') {
+        clearInterval(interval);
+        progressSection.style.display = 'none';
+        formSection.style.display = 'grid';
+        alertEl.innerHTML = `<div class="alert alert-error">${body.error_message || 'Error durante el análisis.'}</div>`;
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = false;
+        btn.textContent = 'Analizar mi Odoo gratis →';
+      }
+    } catch(e) {}
+  }, 3000);
+}
+</script>
+{% endblock %}

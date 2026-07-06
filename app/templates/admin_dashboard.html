@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Odoo Pulse Admin{% endblock %}
+{% block body %}
+<header style="border-bottom:1px solid var(--border);">
+  <div class="container">
+    <nav class="nav">
+      <span class="nav-brand">Odoo Pulse</span>
+      <div class="flex items-center gap-2">
+        <span class="text-subtle text-sm">{{ admin_email }}</span>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Salir</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main style="padding:2rem 0;">
+  <div class="container">
+    <div class="flex items-center justify-between flex-wrap gap-2" style="margin-bottom:1.5rem;">
+      <h1 style="font-size:1.75rem;">Leads</h1>
+      <div class="flex gap-1 flex-wrap">
+        <button onclick="filterBy('')" class="btn btn-secondary btn-sm filter-btn active" data-status="">Todos</button>
+        <button onclick="filterBy('nuevo')" class="btn btn-secondary btn-sm filter-btn" data-status="nuevo">Nuevos</button>
+        <button onclick="filterBy('contactado')" class="btn btn-secondary btn-sm filter-btn" data-status="contactado">Contactados</button>
+        <button onclick="filterBy('en_negociacion')" class="btn btn-secondary btn-sm filter-btn" data-status="en_negociacion">En negociación</button>
+        <button onclick="filterBy('cliente')" class="btn btn-secondary btn-sm filter-btn" data-status="cliente">Clientes</button>
+        <button onclick="filterBy('descartado')" class="btn btn-secondary btn-sm filter-btn" data-status="descartado">Descartados</button>
+      </div>
+    </div>
+
+    <div id="loading" style="text-align:center; padding:3rem;">
+      <div class="spinner" style="margin:0 auto;"></div>
+    </div>
+    <div id="table-wrapper" style="display:none;">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Contacto</th>
+                <th class="hide-mobile">Estado</th>
+                <th class="hide-mobile">Score</th>
+                <th class="hide-mobile">Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <p id="empty-msg" style="display:none; text-align:center; color:var(--text-subtle); padding:3rem;">
+        No hay leads con este filtro.
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+const STATUS_LABELS = {
+  nuevo: 'Nuevo', contactado: 'Contactado', en_negociacion: 'En negociación',
+  cliente: 'Cliente', descartado: 'Descartado',
+};
+const STATUS_COLORS = {
+  nuevo: 'var(--teal)', contactado: 'var(--amber)', en_negociacion: 'var(--amber)',
+  cliente: 'var(--green)', descartado: 'var(--text-subtle)',
+};
+
+async function filterBy(status) {
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === status);
+  });
+  await loadClients(status);
+}
+
+async function loadClients(status = '') {
+  const url = '/api/admin/dashboard' + (status ? '?lead_status=' + status : '');
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const clients = await res.json();
+  const tbody = document.getElementById('clients-body');
+  const empty = document.getElementById('empty-msg');
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('table-wrapper').style.display = 'block';
+  tbody.innerHTML = '';
+  if (!clients.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  clients.forEach(c => {
+    const scan = c.latest_scan;
+    const scoreHtml = scan && scan.score != null
+      ? `<span class="text-mono" style="color:var(--teal)">${scan.score}</span>`
+      : '<span class="text-subtle">—</span>';
+    const dateStr = new Date(c.created_at).toLocaleDateString('es-ES');
+    const reportBtn = scan
+      ? `<button onclick="copyLink('${scan.public_token}', event)" class="btn btn-secondary btn-sm">Copiar link</button>`
+      : '';
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.onclick = () => window.location.href = '/admin/clients/' + c.id;
+    tr.innerHTML = `
+      <td><strong>${c.company_name}</strong></td>
+      <td class="text-muted">${c.contact_name}<br><span class="text-subtle text-sm">${c.contact_email}</span></td>
+      <td class="hide-mobile"><span style="color:${STATUS_COLORS[c.lead_status] || 'var(--text-muted)'};">${STATUS_LABELS[c.lead_status] || c.lead_status}</span></td>
+      <td class="hide-mobile">${scoreHtml}</td>
+      <td class="hide-mobile text-subtle text-sm">${dateStr}</td>
+      <td onclick="event.stopPropagation()">${reportBtn}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function copyLink(token, e) {
+  const url = location.origin + '/report/' + token;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = e.target;
+    btn.textContent = '¡Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar link', 2000);
+  });
+}
+
+async function logout() {
+  await fetch('/api/admin/logout', { method: 'POST' });
+  window.location.href = '/admin/login';
+}
+
+loadClients();
+</script>
+{% endblock %}
