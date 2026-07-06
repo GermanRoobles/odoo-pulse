@@ -113,3 +113,78 @@ def send_new_lead_notification(
         "subject": f"🔔 Nuevo lead — {company_name} (score {score})",
         "html": html,
     })
+
+
+def send_report_to_lead(
+    contact_name: str,
+    contact_email: str,
+    company_name: str,
+    score: int,
+    score_label: str,
+    report_url: str,
+) -> None:
+    if not settings.resend_api_key:
+        return
+
+    resend.api_key = settings.resend_api_key
+    score_col = _score_color(score)
+    first_name = contact_name.split()[0] if contact_name else contact_name
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0; padding:0; background:#0b1120; font-family:'Segoe UI',system-ui,sans-serif;">
+  <div style="max-width:560px; margin:0 auto; padding:32px 16px;">
+
+    <div style="margin-bottom:28px;">
+      <span style="font-family:monospace; font-size:18px; font-weight:700; color:#14b8a6;">Odoo Pulse</span>
+    </div>
+
+    <h1 style="font-size:20px; color:#f1f5f9; margin:0 0 8px;">Hola {first_name}, tu informe está listo</h1>
+    <p style="font-size:15px; color:#94a3b8; margin:0 0 28px;">
+      Hemos analizado <strong style="color:#f1f5f9;">{company_name}</strong> y aquí tienes los resultados.
+    </p>
+
+    <!-- Score -->
+    <div style="background:#141f35; border:1px solid #263352; border-radius:12px; padding:20px 24px; margin-bottom:20px; text-align:center;">
+      <p style="font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:.08em; margin:0 0 12px;">Puntuación de madurez de automatización</p>
+      <div style="width:72px; height:72px; border-radius:50%; border:6px solid {score_col};
+        display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
+        <span style="font-family:monospace; font-size:22px; font-weight:700; color:{score_col};">{score}</span>
+      </div>
+      <p style="font-size:16px; font-weight:600; color:#f1f5f9; margin:0 0 4px;">{score_label}</p>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center; margin-bottom:28px;">
+      <a href="{report_url}" style="display:inline-block; background:#14b8a6; color:#0b1120;
+        font-weight:700; font-size:15px; padding:14px 32px; border-radius:8px; text-decoration:none;">
+        Ver mi informe completo →
+      </a>
+    </div>
+
+    <div style="background:#141f35; border:1px solid #263352; border-radius:10px; padding:16px 20px; margin-bottom:28px;">
+      <p style="font-size:13px; color:#94a3b8; margin:0 0 8px;">
+        El informe incluye los hallazgos más críticos de tu Odoo con estimaciones de ahorro de tiempo y herramientas recomendadas.
+      </p>
+      <p style="font-size:13px; color:#94a3b8; margin:0;">
+        ¿Quieres que implementemos las mejoras? Responde a este email o escríbeme directamente.
+      </p>
+    </div>
+
+    <p style="font-size:12px; color:#334155; text-align:center;">
+      Odoo Pulse · Herramienta de auditoría automática<br>
+      <a href="mailto:germanroobles@gmail.com" style="color:#475569;">germanroobles@gmail.com</a>
+    </p>
+  </div>
+</body>
+</html>
+"""
+
+    resend.Emails.send({
+        "from": "Germán · Odoo Pulse <onboarding@resend.dev>",
+        "to": [contact_email],
+        "subject": f"Tu informe Odoo Pulse — {company_name} (puntuación: {score})",
+        "html": html,
+    })

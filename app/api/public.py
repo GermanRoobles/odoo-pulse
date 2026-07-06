@@ -1,7 +1,7 @@
 import uuid
 import json
 from datetime import datetime, timezone
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.models.base import get_db, SessionLocal
@@ -12,7 +12,9 @@ from app.security.crypto import encrypt_credentials, decrypt_credentials
 from app.scanner.odoo_client import OdooClient, OdooConnectionError, OdooPermissionError
 from app.scanner.checks import run_all_checks
 from app.ai.analyzer import analyze_checks, AIAnalysisError
-from app.notifications.email import send_new_lead_notification
+from app.notifications.email import send_new_lead_notification, send_report_to_lead
+
+from app.limiter import limiter
 
 router = APIRouter()
 
@@ -93,6 +95,19 @@ def _run_scan(scan_id: int, db: Session):
         except Exception:
             pass  # never fail the scan because of a notification error
 
+        # Notify lead with their report link
+        try:
+            send_report_to_lead(
+                contact_name=client_record.contact_name,
+                contact_email=client_record.contact_email,
+                company_name=client_record.company_name,
+                score=result.score,
+                score_label=result.score_label,
+                report_url=f"{settings.app_url}/report/{scan.public_token}",
+            )
+        except Exception:
+            pass
+
     except (OdooConnectionError, OdooPermissionError) as e:
         scan.status = ScanStatus.error
         scan.error_message = str(e)
@@ -108,7 +123,9 @@ def _run_scan(scan_id: int, db: Session):
 
 
 @router.post("/api/leads")
+@limiter.limit("3/hour")
 def create_lead(
+    request: Request,
     body: LeadRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),

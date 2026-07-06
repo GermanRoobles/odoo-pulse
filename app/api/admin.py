@@ -41,8 +41,14 @@ def admin_login(body: LoginRequest, response: Response, db: Session = Depends(ge
     user = db.query(AdminUser).filter(AdminUser.email == body.email).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    from app.config import settings
     token = create_session_token(user.id)
-    response.set_cookie(SESSION_COOKIE, token, httponly=True, samesite="lax")
+    response.set_cookie(
+        SESSION_COOKIE, token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.environment == "production",
+    )
     return {"ok": True}
 
 
